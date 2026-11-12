@@ -1,69 +1,63 @@
 ---
 name: implement-plan
-description: Implementa un plan guardado en plans/<num_issue>-<breve-descripcion>.md en una rama propia creada desde development, aplicando TDD estricto tarea a tarea, marcando cada tarea como hecha en el plan y haciendo un commit por tarea. Úsalo cuando pidan implementar, ejecutar o desarrollar un plan.
-argument-hint: <ruta o nombre del plan, p. ej. plans/12-paginacion-vendehumos.md>
+description: Implementa un plan de la carpeta plans/ aplicando TDD estricto, tarea a tarea, en una rama propia creada desde development. Úsala cuando pidan implementar, ejecutar o desarrollar un plan.
+argument-hint: <ruta o nombre del plan, ej.: plans/1-login-registro-usuarios-jwt.md>
 ---
 
-# Implementar un plan
+# implement-plan
 
-Implementa el plan indicado por el usuario, tarea por tarea, con TDD estricto y un commit por tarea.
+Implementa el plan indicado en `$ARGUMENTS` tarea a tarea, con TDD estricto, marcando cada tarea en el plan y haciendo un commit por tarea.
 
-Plan a implementar: $ARGUMENTS
+## Pasos
 
-## 1. Localizar y leer el plan
+### 1. Localiza y lee el plan
 
-1. Resuelve el plan a partir del argumento: ruta completa, nombre de archivo o `<num_issue>`. Los planes viven en `plans/`. Si no hay argumento o hay varias coincidencias, pregunta al usuario cuál es. No adivines.
-2. Lee el plan completo (Objetivo, Alcance, Archivos afectados, Tareas, Criterios de aceptación, Dudas y decisiones).
-3. Si en "Dudas y decisiones" quedan preguntas abiertas que bloqueen la implementación, consúltalas con el usuario antes de empezar.
-4. Lee `CLAUDE.md` y respeta sus convenciones: capas `controllers`, `services`, `repositories`, `models`, `utils`; funciones en snake_case; prettier (sin `;` innecesarios, comillas simples); eslint; tests con vitest.
-5. Si todas las tareas ya están marcadas (`- [x]`), avisa al usuario y detente.
+- Resuelve `$ARGUMENTS` a un archivo de `plans/` (acepta la ruta completa, el nombre con o sin `.md`, o solo el número de issue). Si no se ha indicado plan o hay varias coincidencias, pregunta cuál antes de continuar.
+- Lee el plan completo (objetivo, alcance, archivos afectados, tareas, criterios de aceptación, dudas) y `CLAUDE.md`, y respeta sus convenciones (capas controllers/services/repositories/models/utils, funciones en snake_case, prettier sin `;` y con comillas simples, eslint, tests con vitest).
+- Si en "Dudas y decisiones tomadas" hay dudas abiertas que bloquean la implementación, pregúntalas al usuario antes de empezar.
 
-## 2. Preparar la rama
+### 2. Prepara la rama
 
-El nombre de la rama es el **nombre del plan**: el nombre del archivo sin la extensión `.md` (ej. `plans/12-paginacion-vendehumos.md` → rama `12-paginacion-vendehumos`).
+El nombre de la rama es el **nombre del plan sin la extensión** (ej.: `plans/1-login-registro-usuarios-jwt.md` → `1-login-registro-usuarios-jwt`).
 
-1. Comprueba que el árbol de trabajo está limpio con `git status --short`. Si hay cambios sin commitear ajenos al plan, avisa al usuario y pregunta qué hacer (no los pierdas ni los mezcles en los commits del plan).
-2. Comprueba si existe `development` (`git branch --list development` y `git branch -r --list origin/development`).
-   - **Si no existe**, créala primero a partir de `main`: `git switch main` y `git switch -c development`. Si `main` tampoco existe, avisa al usuario y detente.
-   - **Si existe**, úsala tal cual (si solo existe en remoto, crea la local con `git switch development`).
-3. Crea la rama del plan a partir de `development`: `git switch development` y `git switch -c <nombre-del-plan>`.
-   - Si la rama del plan ya existe, no la recrees ni la sobrescribas: pregunta al usuario si quiere continuar en ella (retomar el plan) o usar otro nombre.
-4. No hagas `git push` ni cambies de rama durante la implementación salvo que el usuario lo pida.
+1. Ejecuta `git status --short` y `git branch --list development main`. Si hay cambios sin commitear que no sean el propio plan, avisa al usuario antes de cambiar de rama.
+2. Si `development` **no existe**, créala a partir de `main`: `git switch -c development main`. No la publiques (nada de `git push`).
+3. Crea la rama del plan a partir de `development`: `git switch -c <nombre-del-plan> development`.
+4. Si la rama del plan ya existe, no la recrees ni la sobrescribas: pregunta al usuario si continuar en ella (útil para retomar un plan a medias; en ese caso salta las tareas ya marcadas `- [x]`).
+5. Si el plan es un archivo sin commitear (p. ej. está en `plans/` sin trackear), se mantendrá en el árbol de trabajo al cambiar de rama; se commiteará junto con la primera tarea.
 
-Si el propio archivo del plan está sin commitear (p. ej. recién generado con plan-feature), llévalo a la rama del plan y haz con él el primer commit (`docs(plans): ...` con el comando `/commit`) antes de empezar con las tareas.
+### 3. Implementa cada tarea con TDD estricto
 
-## 3. Implementar tarea a tarea
+Recorre las tareas `- [ ]` **en orden**, de una en una. Para cada tarea:
 
-Recorre las tareas pendientes (`- [ ]`) **en el orden del plan**. Para cada tarea, sigue este ciclo sin saltarte ningún paso:
+1. **Red**: escribe primero el test (vitest) que describe el comportamiento de la tarea. Ejecútalo (`npx vitest run <archivo>`) y **comprueba que falla** por la razón esperada (no por un error de sintaxis o de import). No escribas código de producción antes de ver el test en rojo.
+2. **Green**: escribe el código **mínimo** necesario para que el test pase, en la capa que corresponda. Ejecuta el test y confirma que pasa.
+3. **Refactor**: limpia el código manteniendo los tests en verde. Aplica prettier y eslint a los archivos tocados.
+4. **Verifica**: ejecuta la suite completa (`npm test`) y comprueba que nada anterior se ha roto. Si algo falla, corrígelo antes de seguir.
+5. **Marca la tarea como hecha** en el archivo del plan, cambiando `- [ ]` por `- [x]` solo para esa tarea y solo cuando el test pase con el código implementado.
+6. **Commit**: invoca el slash command `/commit` (con la herramienta Skill, skill `commit`) pasando como argumento un contexto breve con el número y título de la tarea. El commit debe incluir el código, el test y el plan actualizado. No hagas `git commit` a mano ni `git push`.
 
-1. **Red — escribe primero el test.** Escribe (en vitest) el test más pequeño que describa el comportamiento de la tarea. No escribas código de producción antes. Ejecuta el test y **comprueba que falla** y que falla por la razón esperada (no por un error de sintaxis o de importación). Si pasa sin haber implementado nada, el test no sirve: corrígelo.
-2. **Green — implementa lo mínimo.** Escribe solo el código necesario para que ese test pase, en la capa que corresponda. Ejecuta el test y comprueba que pasa.
-3. **Refactor.** Con los tests en verde, limpia el código si hace falta, sin cambiar el comportamiento ni añadir funcionalidad.
-4. **Verifica.** Ejecuta toda la suite de tests, eslint y prettier. Todo debe estar en verde y sin errores. Si algo falla, arréglalo antes de seguir.
-5. **Marca la tarea como hecha** en el archivo del plan, cambiando `- [ ]` por `- [x]` solo en esa tarea y solo **después** de que el test y el código pasen.
-6. **Commit.** Invoca el slash command `/commit` (con la herramienta Skill/slash command `commit`) para crear el commit de esa tarea, incluyendo el código, los tests y el plan actualizado. Un commit por tarea. Pásale como contexto el nombre de la tarea.
+Tareas sin comportamiento testable (instalar dependencias, crear archivos de configuración, documentar en `CLAUDE.md`, etc.):
+- No inventes tests artificiales. Verifica el resultado con un comando observable (p. ej. `npm ls`, `npx eslint .`, `npx prettier --check .`, arrancar el comando) y, si pasa, marca la tarea y haz commit igualmente.
+- Si la tarea es la que configura vitest y aún no existe, instálalo y configúralo primero, y usa su ejecución como verificación.
 
-Reglas del ciclo:
+### 4. Cierre
 
-- **TDD estricto:** nunca hay código de producción sin un test previo que haya fallado. Nada de escribir el código y el test después.
-- **Tareas sin comportamiento testeable** (configuración de eslint/prettier/vitest, documentación, formato): no inventes un test artificial. Verifica la tarea con el comando que corresponda (p. ej. `npx eslint .`, `npx prettier --check .`), márcala y haz commit. Indica en el resumen final qué tareas se verificaron así.
-- **No marques una tarea como hecha** si su test no existe, no pasa o rompe otros tests.
-- **Un commit por tarea:** no agrupes varias tareas en un commit ni dejes tareas hechas sin commitear.
-- Si una tarea es más grande de lo previsto o el plan es incorrecto/incompleto, detente y consúltalo con el usuario en lugar de improvisar. Si decides algo por tu cuenta, anótalo en "Dudas y decisiones tomadas" del plan.
-- No toques código fuera del alcance del plan.
-- Si un test no consigue pasar tras varios intentos razonables, detente y explica el bloqueo al usuario; no desactives ni debilites el test para que pase.
+- Cuando todas las tareas estén en `- [x]`, recorre los **criterios de aceptación** del plan y comprueba cada uno (tests, ejecución real si procede). Informa de los que no se cumplan y aquellos que se cumplan, marcalos `- [x]`.
+- Ejecuta `git status` y `git log --oneline` para confirmar que el árbol está limpio y hay un commit por tarea.
+- Responde con: rama usada, tareas completadas, resultado de la suite de tests y cualquier decisión o desviación respecto al plan.
 
-## 4. Cierre
+### 5. Avisa por Slack
 
-1. Cuando todas las tareas estén marcadas, recorre los **Criterios de aceptación** del plan y verifícalos uno a uno (tests, eslint, prettier, códigos HTTP, etc.). Si alguno no se cumple, añade la tarea necesaria al plan y trátala con el mismo ciclo TDD. Y aquellos que se cumplen marcalas.
-2. Muestra `git status` y `git log --oneline` de la rama para confirmar que el árbol está limpio y que hay un commit por tarea.
-3. Resume al usuario: nombre de la rama, tareas completadas, resultado de tests/lint/formato, tareas verificadas sin test (si las hay) y decisiones tomadas. No hagas `git push` ni abras PR salvo que el usuario lo pida.
+- Como último paso, envía un mensaje al canal de Slack `curso-claude-ed3` indicando que el plan ya se ha implementado. Usa la herramienta MCP de Slack (`mcp__slack__slack_post_message` para publicar el mensaje en el canal con el id "C0CGZ01R9M2"; si no está cargada, cárgala antes con ToolSearch).
+- El mensaje debe incluir el nombre del plan y la rama (ej.: `Ya se ha implementado el plan 1-login-registro-usuarios-jwt (rama 1-login-registro-usuarios-jwt).`). Si quedaron tareas sin completar o criterios sin cumplir, indícalo en el mensaje en lugar de decir que está terminado.
+- No incluyas datos privados (emails, rutas locales, secretos). Si no se puede enviar el mensaje, informa al usuario del fallo, sin reintentar en bucle.
 
-## 5. Avisar por Slack
+## Reglas
 
-Como último paso, envía un mensaje al canal de Slack `curso-claude-ed3` indicando que el plan ya se ha implementado:
-
-1. Usa la herramienta `slack_post_message` del MCP de Slack con el ID de canal `C0CGZ01R9M2` (canal `curso-claude-ed3`). No hace falta buscar el ID con `slack_list_channels`.
-2. Mensaje en español, breve, con el nombre del plan, la rama y el número de tareas completadas. Ej.: `✅ Implementado el plan 12-paginacion-vendehumos en la rama 12-paginacion-vendehumos (8 tareas completadas, tests/lint/formato en verde).`
-3. Solo envíalo si todas las tareas están completadas y verificadas. Si la implementación se detuvo por un bloqueo, no lo envíes.
-4. Si el canal no existe o el MCP de Slack no está disponible, no inventes alternativas: indícalo al usuario en el resumen y termina.
+- Una tarea = un ciclo TDD = un commit. No agrupes varias tareas en un commit ni dejes tareas hechas sin commitear.
+- Nunca marques una tarea como hecha si su test no pasa.
+- No te saltes el paso rojo del test ni escribas código "por adelantado" de tareas posteriores.
+- Si una tarea no se puede completar o el plan es incorrecto, para, explica el problema y pregunta al usuario; no improvises cambios fuera del alcance del plan.
+- No hagas `git push`, `--amend`, `--no-verify` ni modifiques la configuración de git.
+- No toques `main`, salvo para crear `development` a partir de ella.
